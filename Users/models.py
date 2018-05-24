@@ -24,6 +24,23 @@ class UserInfo(models.Model):
         return self.name
 
 
+class Seiler(models.Model):
+    user = models.OneToOneField(User, help_text='商家')
+    name = models.CharField(help_text='员工姓名', max_length=50)
+    gender = models.CharField(choices=(
+        ('男', 'male'), ('女', 'female')), max_length=11, help_text='性别', default='male')
+    email = models.EmailField(help_text='邮箱', default='')
+    age = models.IntegerField(help_text='年龄', default='')
+    mobile = models.CharField(help_text='手机号码', max_length=11, default='')
+
+    class Meta:
+        verbose_name = "Seiler"
+        verbose_name_plural = "Seilers"
+
+    def __str__(self):
+        return self.name
+
+
 class Wallet(models.Model):
     '''钱包'''
     user = models.OneToOneField(User, help_text='用户')

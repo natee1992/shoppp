@@ -16,3 +16,10 @@ def method_not_allowed():
         'state': 405,
         'msg': '方法不支持'
     }), content_type='application/json')
+
+
+def params_errors(data):
+    return HttpResponse(json.dumps({
+        'state': 422,
+        'data': data
+    }), content_type='application/json')
