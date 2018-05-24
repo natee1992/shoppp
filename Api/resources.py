@@ -70,3 +70,4 @@ class Register(object):
                     version=self.version, name=resource.name),
                     csrf_exempt(resource.enter)))
         return urlpatterns
+
