@@ -492,29 +492,122 @@ class ShoppingCatResource(Resource):
             'data': all_data
         })
 
-        # 创建订单字典
 
-        # data = request.GET
-        # try:
-        #     good_id = int(data.get('good_id', 0))
-        #     good = Good.objects.get(pk=good_id)
-        # except Exception:
-        #     return params_errors({
-        #         'msg': '不存在的id'
-        #     })
-        # good_dict = {}
-        # good_dict['id'] = good.id
-        # good_dict['name'] = good.name
-        # good_dict['image'] = good.image
-        # good_dict['stock'] = good.stock
-        # good_dict['price'] = good.price
-        # good_dict['desc'] = good.desc
-        # good_dict['color'] = good.color
-        # good_dict['size'] = good.size
-        # good_dict['add_time'] = datetime.strftime(good.add_time, '%Y-%m-%d')
-        # good_dict['category'] = [{
-        #     category.id,
-        #     category.name,
-        #     category.desc
-        # } for category in good.category_set.all()]
-        # return json_response(good_dict)
+class OrderResource(Resource):
+    '''
+    订单
+    '''
+    # 获取订单
+    @userinfo_permission
+    def get(self, request, *args, **kwargs):
+        data = request.GET
+        user = request.user
+        if not user.is_authenticated():
+            return not_authenticated()
+        # 是否是查看单个订单
+        is_single = data.get('is_single', False)
+        # 单个, 需要传入 order_id
+        if is_single:
+            order_id = data.get('order_id', False)
+            order = Order.objects.filter(pk=order_id, )
+            if (not order_id or not order):
+                return params_errors({
+                    'msg': '不存在订单id'
+                })
+            # 构建详细信息字典
+            data_dict = {}
+            order = order[0]
+            data_dict['id'] = order.id
+            data_dict['user'] = order.user.username
+            data_dict['add_time'] = datetime.strftime(
+                order.add_time, '%Y-%m-%d')
+            data_dict['state'] = order.state
+            data_dict['all_price'] = order.all_price
+            # 该订单的详情(orderdetail)
+            data_dict['detail_data'] = []
+            for orderdetail in order.orderdetail_set.all():
+                orderdetail_dict = {}
+                orderdetail_dict['good'] = orderdetail.good.name
+                orderdetail_dict['num'] = orderdetail.num
+                orderdetail_dict['price'] = orderdetail.price
+            data_dict['detail_data'].append(orderdetail_dict)
+            return json_response(data_dict)
+        # 用户的订单列表(所有的订单)
+        else:
+            all_order = Order.objects.filter(user=user)
+            data = []
+            for order in all_order:
+                order_dict = {}
+                order_dict['id'] = order.id
+                order_dict['all_price'] = order.all_price
+                order_dict['user'] = {
+                    'id': user.id,
+                    'name': user.userinfo.name
+                }
+                data.append(order_dict)
+            return json_response(data)
+
+    # 创建订单
+    @atomic
+    @userinfo_permission
+    def put(self, request, *args, **kwargs):
+        user = request.user
+        shoppingcat = user.shoppingcat
+        order = Order()
+        order.user = user
+        order.add_time = datetime.now()
+        order.state = 0
+        order.all_price = shoppingcat.total_price
+        order.save()
+        # 购物车详情, 此处存着用户刚刚提交的所有的上碰的信息
+        shopping_cat_details = user.shoppingcat.shoppingcatdetail_set.all()
+        for shopping_cat_detail in shopping_cat_details:
+            orderdetail = OrderDetail()
+            orderdetail.order = order
+            orderdetail.good = shopping_cat_detail.good
+            orderdetail.num = shopping_cat_detail.num
+            orderdetail.price = shopping_cat_detail.good.price * shopping_cat_detail.num
+            orderdetail.save()
+        # 删除购物车和购物车详情
+        shopping_cat_details.delete()
+        user.shoppingcat.delete()
+        return json_response({
+            'msg': '创建订单成功'
+        })
+
+    # 修改订单状态
+    @atomic
+    @userinfo_permission
+    def post(self, request, *args, **kwargs):
+        order = request.user.order
+        # 判断订单的状态
+        # 1. 订单处于未付款, 需要付款
+        if order.state == 0:
+            pass
+
+# class UserFavResource(Resource):
+#     '''用户收藏'''
+#     # 添加收藏
+#     @atomic
+#     @userinfo_permission
+#     def put(self,request,*args,**kwargs):
+#         user = request.user
+#         data = request.PUT
+#         good_id = data.get('good',False)
+#         if not good_id:
+#             return params_errors({
+#                 'msg': '没有选择商品'
+#             })
+#         try:
+#             good_id = abs(int(good_id))
+#         except Exception as e:
+#             return params_errors({
+#                 'msg': '商品id格式错误'
+#             })
+#         good = Good.objects.filter(id=good_id)
+#         if not good:
+#             return json_response({
+#                 'msg': '商品不存在'
+#             })
+#         userfav = UserFav()
+#         userfav.user = user
