@@ -30,3 +30,10 @@ def not_authenticated():
         'state': 401,
         'msg': '用户未登录'
     }))
+
+
+def permission_refused():
+    return HttpResponse(json.dumps({
+        'state': 402,
+        'msg': '用户无权限'
+    }))

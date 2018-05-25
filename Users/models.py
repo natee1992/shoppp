@@ -88,7 +88,7 @@ class Good(models.Model):
     category = models.ManyToManyField('Category', help_text='类别', default='')
     image = models.CharField(help_text='商品图', max_length=256, default='')
     stock = models.IntegerField(help_text='库存', default=1)
-    price = models.FloatField(help_text='价格', default='')
+    price = models.FloatField(help_text='价格', default=0)
     desc = models.CharField(help_text='商品简介', max_length=50, default='')
     color = models.CharField(help_text='颜色', max_length=50, default='')
     size = models.CharField(help_text='大小', max_length=50, default='')

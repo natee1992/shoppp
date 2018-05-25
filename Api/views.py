@@ -7,6 +7,7 @@ from django.db.transaction import atomic
 
 from Users.models import *
 from Api.utils import *
+from Api.decorators import seiler_permission
 
 
 class SessionCodeResource(Resource):
