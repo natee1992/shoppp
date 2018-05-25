@@ -575,39 +575,162 @@ class OrderResource(Resource):
             'msg': '创建订单成功'
         })
 
-    # 修改订单状态
+    # 付款和发货
+    @atomic
+    def post(self, request, *args, **kwargs):
+        data = request.POST
+        order_id = data.get('order_id')
+        user = request.user
+        orders = Order.objects.filter(id=order_id)
+        if not orders:
+            return params_errors({
+                'msg': '不存在的订单'
+            })
+        order = orders[0]
+
+        # 1. 订单处于未付款, 需要付款
+
+        #@userinfo_permission
+        def pay(request, *args, **kwargs):
+            order = orders.filter(user=user)
+            if not order:
+                return params_errors({
+                    'msg': '不存在的订单'
+                })
+            order = order[0]
+            # 钱包操作
+            wallet = user.wallet
+            # 判断此人钱包余额是否可以支付
+            if wallet.banlance > float(order.all_price):
+                wallet.banlance -= float(order.all_price)
+                wallet.save()
+                # 创建一条钱包流水记录
+                waleltdetails = WalletDetails()
+                waleltdetails.wallet = wallet
+                waleltdetails.order = order
+                waleltdetails.save()
+                # 改为付款状态
+                order.state = 1
+                order.finish_time = datetime.now()
+                order.save()
+                # 首先获取订单详情, 以便添加购买历史
+                orderdetails = order.orderdetail_set.all()
+                for orderdetail in orderdetails:
+                    # 添加购买历史
+                    shopping_history = ShoppingHistory()
+                    shopping_history.user = user
+                    shopping_history.good = orderdetail.good
+                    shopping_history.save()
+                return json_response({
+                    'msg': '付款成功',
+                    'pay_money': order.all_price,
+                    'balance': wallet.banlance,
+                    'waleltdetails_id': waleltdetails.id,
+                    'order_id': order.id
+
+                })
+            else:
+                return params_errors({
+                    'msg': '余额不足'
+                })
+
+        # 发货
+        # @seiler_permission
+        def send_out(request, *args, **kwargs):
+            order = orders[0]
+            order.state = 2
+            order.save()
+            return json_response({
+                'msg': '发货成功'
+            })
+
+        # 此处判断订单的状态
+        if order.state == 0 and hasattr(user, 'userinfo'):
+            return pay(request, *args, **kwargs)
+        elif order.state == 1 and hasattr(user, 'seiler'):
+            return send_out(request, *args, **kwargs)
+        elif order.state == 2:
+            return params_errors({
+                'msg': '订单已经发货'
+            })
+        else:
+            return permission_refused()
+
+
+class UserFavResource(Resource):
+    '''用户收藏'''
+    # 添加收藏
     @atomic
     @userinfo_permission
-    def post(self, request, *args, **kwargs):
-        order = request.user.order
-        # 判断订单的状态
-        # 1. 订单处于未付款, 需要付款
-        if order.state == 0:
-            pass
+    def put(self, request, *args, **kwargs):
+        user = request.user
+        data = request.PUT
+        good_id = data.get('good_id', False)
+        if not good_id:
+            return params_errors({
+                'msg': '没有选择商品'
+            })
+        try:
+            good_id = abs(int(good_id))
+        except Exception as e:
+            return params_errors({
+                'msg': '商品id格式错误'
+            })
+        good = Good.objects.filter(id=good_id)
+        if not good:
+            return json_response({
+                'msg': '商品不存在'
+            })
+        userfav = UserFav()
+        userfav.user = user
+        goods = Good.objects.filter(id=good_id)
+        good = goods[0]
+        userfav.good = good
+        userfav.save()
+        return json_response({
+            'msg': '添加收藏成功'
+        })
 
-# class UserFavResource(Resource):
-#     '''用户收藏'''
-#     # 添加收藏
-#     @atomic
-#     @userinfo_permission
-#     def put(self,request,*args,**kwargs):
-#         user = request.user
-#         data = request.PUT
-#         good_id = data.get('good',False)
-#         if not good_id:
-#             return params_errors({
-#                 'msg': '没有选择商品'
-#             })
-#         try:
-#             good_id = abs(int(good_id))
-#         except Exception as e:
-#             return params_errors({
-#                 'msg': '商品id格式错误'
-#             })
-#         good = Good.objects.filter(id=good_id)
-#         if not good:
-#             return json_response({
-#                 'msg': '商品不存在'
-#             })
-#         userfav = UserFav()
-#         userfav.user = user
+    # 查看收藏
+    @userinfo_permission
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        # 取出用户所有收藏商品
+        userfavs = UserFav.objects.filter(user=user)
+        # 构建收藏数据字典
+        all_data = {}
+        all_data['data'] = []
+        for userfav in userfavs:
+            data = {}
+            data['good'] = userfav.good.name
+            all_data['data'].append(data)
+        return json_response({
+            'data': all_data
+        })
+
+    # 删除收藏
+    @userinfo_permission
+    def delete(self, request, *args, **kwargs):
+        user = request.user
+        data = request.DELETE
+        good_id = data.get('good_id', False)
+        if not good_id:
+            return params_errors({
+                'msg': '没有选择商品'
+            })
+        try:
+            good_id = abs(int(good_id))
+        except Exception as e:
+            return params_errors({
+                'msg': '商品id格式错误'
+            })
+        good = Good.objects.filter(id=good_id)
+        if not good:
+            return json_response({
+                'msg': '商品不存在'
+            })
+        userfav_good = UserFav.objects.filter(good__id=good_id)
+        userfav_good[0].delete()
+        return json_response({
+            'msg': '已从收藏夹删除该商品'
+        })

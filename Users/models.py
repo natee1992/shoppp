@@ -56,7 +56,7 @@ class Wallet(models.Model):
 
 class WalletDetails(models.Model):
     '''钱包流水'''
-    wallet = models.OneToOneField(Wallet, help_text='钱包')
+    wallet = models.ForeignKey(Wallet, help_text='钱包')
     time = models.DateTimeField(default=datetime.now, help_text='发生时间')
     order = models.OneToOneField('Order', help_text='订单')
 
