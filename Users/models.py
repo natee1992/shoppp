@@ -120,11 +120,11 @@ class WatchHistory(models.Model):
 class Order(models.Model):
     '''订单'''
     user = models.ForeignKey(User, help_text='用户')
-    good = models.ForeignKey('Good', help_text='商品')
     add_time = models.DateTimeField(default=datetime.now, help_text='添加时间')
     state = models.IntegerField(
         help_text='订单状态:0--->未付款；1--->已付款，代发货；2--->已发货', default=0)
     finish_time = models.CharField(max_length=48, help_text='订单付款时间')
+    all_price = models.CharField(default=0, max_length=50, help_text='商品总额')
 
     class Meta:
         verbose_name = "Order"
@@ -132,6 +132,21 @@ class Order(models.Model):
 
     def __str__(self):
         return self.user
+
+
+class OrderDetail(models.Model):
+    '''订单详情'''
+    order = models.ForeignKey('Order', help_text='订单')
+    good = models.ForeignKey('Good', help_text='商品')
+    num = models.IntegerField(default=0)
+    price = models.FloatField(default=0)
+
+    class Meta:
+        verbose_name = "OrderDetail"
+        verbose_name_plural = "OrderDetails"
+
+    def __str__(self):
+        pass
 
 
 class Comment(models.Model):
@@ -146,7 +161,7 @@ class Comment(models.Model):
         verbose_name_plural = "Comments"
 
     def __str__(self):
-        return user
+        return self.user
 
 
 class UserFav(models.Model):
@@ -160,20 +175,32 @@ class UserFav(models.Model):
         verbose_name_plural = "UserFavs"
 
     def __str__(self):
-        return user
+        return self.user
 
 
 class ShoppingCat(models.Model):
     '''购物车'''
     user = models.OneToOneField(User, help_text='用户')
-    good = models.ManyToManyField('Good', help_text='商品')
+    total_price = models.FloatField(default=0)
 
     class Meta:
         verbose_name = "ShoppingCat"
         verbose_name_plural = "ShoppingCats"
 
     def __str__(self):
-        return user
+        return self.user
+
+
+class ShoppingCatDetail(models.Model):
+    '''购物车详情'''
+    shoppingcat = models.ForeignKey('ShoppingCat', help_text='购物车')
+    good = models.ForeignKey('Good', help_text='商品')
+    num = models.IntegerField(default=0)
+    add_time = models.DateTimeField(default=datetime.now, help_text='添加时间')
+
+    class Meta:
+        verbose_name = "ShoppingCatDetail"
+        verbose_name_plural = "ShoppingCatDetails"
 
 
 class ShoppingHistory(models.Model):

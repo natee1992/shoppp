@@ -406,18 +406,34 @@ class GoodResource(Resource):
         })
 
 
-# class OrderResource(Resource):
-#     '''用户订单操作'''
-#     # 创建订单
+# class ShoppingCatResource(Resource):
+#     '''用户购物车操作'''
+#     # 添加商品到购物车
 #     @atomic
 #     @userinfo_permission
 #     def put(self, request, *args, **kwargs):
 #         user = request.user
 #         data = request.PUT
-#         good = data.get('good_id', False)
-#         if
-#         order = Order()
-#         order.user = user
+#         good_id = data.get('good_id', False)
+#         if not good_id:
+#             return params_errors({
+#                 'msg': '没有选择商品'
+#             })
+#         try:
+#             good_id = abs(int(good_id))
+#         except Exception as e:
+#             params_errors({
+#                 'msg': '商品id格式错误'
+#             })
+#         good = Good.objects.filter(id=good_id)
+#         if not good:
+#             json_response({
+#                 'msg': '商品不存在'
+#             })
+#         shoppingcat = ShoppingCat()
+#         shoppingcat.user = user
+#         shoppingcat.good =
+#         # 创建订单字典
 
         # data = request.GET
         # try:
