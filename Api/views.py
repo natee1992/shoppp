@@ -291,3 +291,155 @@ class WalletResource(Resource):
         return json_response({
             'banlance': banlance
         })
+
+
+class GoodResource(Resource):
+    '''
+    商品管理
+    '''
+    @atomic
+    @seiler_permission
+    def put(self, request, *args, **kwargs):
+        error_dict = {}
+        data = request.PUT
+        name = data.get('name', '')
+        goods = Good.objects.filter(name=name)
+        try:
+            category_id = int(data.get('category_id', 0))
+            category = Category.objects.filter(pk=category_id)
+        except Exception:
+            error_dict['category'] = '类别id错误'
+        try:
+            stock = int(data.get('stock', 1))
+            price = float(data.get('price', 0))
+        except Exception:
+            error_dict['stock'] = '库存或者价格类型错误'
+        if not category:
+            error_dict['category'] = '不存在商品类别'
+        if goods:
+            error_dict['good'] = '已经添加过的商品'
+        if error_dict:
+            return params_errors(error_dict)
+        if not name:
+            error_dict['name'] = '未输入商品的名称'
+        good = Good()
+        good.name = name
+        good.image = data.get('image', '')
+        good.stock = stock
+        good.price = price
+        good.desc = data.get('desc', '')
+        good.color = data.get('color', '')
+        good.size = data.get('size', '')
+        good.save()
+        good.category.set(category)
+        good.save()
+        return json_response({
+            'msg': '添加商品成功'
+        })
+
+     # 所有商品
+    def get(self, request, *args, **kwargs):
+        all_goods = Good.objects.all()
+        data = []
+        for good in all_goods:
+            good_dict = {}
+            good_dict['id'] = good.id
+            good_dict['name'] = good.name
+            good_dict['image'] = good.image
+            data.append(good_dict)
+        return json_response(data)
+
+    @atomic
+    @seiler_permission
+    def post(self, request, *args, **kwargs):
+        error_dict = {}
+        data = request.POST
+        try:
+            good_id = int(data.get('good_id', 0))
+            good = Good.objects.get(pk=good_id)
+        except Exception:
+            return params_errors({
+                'msg': '不存在的id'
+            })
+        try:
+            category_id = int(data.get('category_id', 0))
+            category = Category.objects.filter(pk=category_id)
+        except Exception:
+            error_dict['category'] = '类别id错误'
+        try:
+            stock = int(data.get('stock', 1))
+            price = float(data.get('price', 0))
+        except Exception:
+            error_dict['stock'] = '库存或者价格类型错误'
+        if error_dict:
+            return params_errors(error_dict)
+        good.name = data.get('name')
+        good.image = data.get('image', '')
+        good.stock = stock
+        good.price = price
+        good.desc = data.get('desc', '')
+        good.color = data.get('color', '')
+        good.size = data.get('size', '')
+        good.save()
+        good.category.set(category)
+        good.save()
+        return json_response({
+            'id': good.id,
+            'name': good.name,
+            'msg': '商品更新成功'
+        })
+
+    @atomic
+    @seiler_permission
+    def delete(self, request, *args, **kwargs):
+        data = request.DELETE
+        try:
+            good_id = int(data.get('good_id', 0))
+            good = Good.objects.get(pk=good_id)
+        except Exception:
+            return params_errors({
+                'msg': '商品不存在'
+            })
+        good.delete()
+        return json_response({
+            'msg': '删除成功'
+        })
+
+
+# class OrderResource(Resource):
+#     '''用户订单操作'''
+#     # 创建订单
+#     @atomic
+#     @userinfo_permission
+#     def put(self, request, *args, **kwargs):
+#         user = request.user
+#         data = request.PUT
+#         good = data.get('good_id', False)
+#         if
+#         order = Order()
+#         order.user = user
+
+        # data = request.GET
+        # try:
+        #     good_id = int(data.get('good_id', 0))
+        #     good = Good.objects.get(pk=good_id)
+        # except Exception:
+        #     return params_errors({
+        #         'msg': '不存在的id'
+        #     })
+        # good_dict = {}
+        # good_dict['id'] = good.id
+        # good_dict['name'] = good.name
+        # good_dict['image'] = good.image
+        # good_dict['stock'] = good.stock
+        # good_dict['price'] = good.price
+        # good_dict['desc'] = good.desc
+        # good_dict['color'] = good.color
+        # good_dict['size'] = good.size
+        # good_dict['add_time'] = datetime.strftime(good.add_time, '%Y-%m-%d')
+        # good_dict['category'] = [{
+        #     category.id,
+        #     category.name,
+        #     category.desc
+        # } for category in good.category_set.all()]
+        # return json_response(good_dict)
