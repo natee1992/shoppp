@@ -138,3 +138,39 @@ class UserResource(Resource):
                     'msg': '没有此用户信息'
                 })
         return not_authenticated()
+
+
+class SessionResource(Resource):
+    # 查看登录状态
+    def get(self, request, *args, **kwargs):
+        if request.user.is_authenticated():
+            return json_response({
+                'msg': '已经登录'
+            })
+        else:
+            return json_response({
+                'msg': '未登录'
+            })
+
+    def put(self, request, *args, **kwargs):
+        # 登录用户
+        data = request.PUT
+        username = data.get('username', '')
+        password = data.get('password', '')
+        user = authenticate(username=username, password=password)
+        if user:
+            login(request, user)
+            return json_response({
+                'msg': '登录成功'
+            })
+        else:
+            return params_errors({
+                'msg': '用户名或者密码错误'
+            })
+
+    def delete(self, request, *args, **kwargs):
+        # 退出登录
+        logout(request)
+        return json_response({
+            'msg': '退出成功'
+        })
