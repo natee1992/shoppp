@@ -6,7 +6,7 @@ def seiler_permission(func):
         user = request.user
         if user.is_authenticated:
             if hasattr(user, 'seiler'):
-                func(self, request, *args, **kwargs)
+                return func(self, request, *args, **kwargs)
             else:
                 return permission_refused()
         else:

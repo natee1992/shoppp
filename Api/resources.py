@@ -3,7 +3,9 @@ import json
 from django.http.response import HttpResponse
 from django.conf.urls import url
 from django.views.decorators.csrf import csrf_exempt
-from Api.utils import method_not_allowed
+
+from Api.utils import *
+from shoppp.settings import DEBUG
 
 
 class Resource(object):
@@ -12,25 +14,32 @@ class Resource(object):
 
     def enter(self, request, *args, **kwargs):
         method = request.method
-        if method == 'GET':
-            response = self.get(request, *args, **kwargs)
-        elif method == 'POST':
-            response = self.post(request, *args, **kwargs)
-        elif method == 'PUT':
-            response = self.put(request, *args, **kwargs)
-        elif method == 'DELETE':
-            response = self.delete(request, *args, **kwargs)
-        elif method == 'OPTION':
-            response = self.option(request, *args, **kwargs)
-        elif method == 'HEAD':
-            response = self.head(request, *args, **kwargs)
-        else:
-            return HttpResponse(
-                json.dumps({
+        try:
+            if method == 'GET':
+                response = self.get(request, *args, **kwargs)
+            elif method == 'POST':
+                response = self.post(request, *args, **kwargs)
+            elif method == 'PUT':
+                response = self.put(request, *args, **kwargs)
+            elif method == 'DELETE':
+                response = self.delete(request, *args, **kwargs)
+            elif method == 'OPTION':
+                response = self.option(request, *args, **kwargs)
+            elif method == 'HEAD':
+                response = self.head(request, *args, **kwargs)
+            else:
+                response = json_response({
                     'state': 422,
-                    'msg': '方法不支持'
-                }),
-                content_type='application/json')
+                    'msg': "方法不支持"
+                })
+        except Exception as e:
+            if DEBUG:
+                raise
+            else:
+                response = HttpResponse({
+                    'state': 500,
+                    'msg': '服务器错误'
+                })
         return response
 
     def get(self, request, *args, **kwargs):

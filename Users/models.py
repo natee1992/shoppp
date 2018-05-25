@@ -72,7 +72,8 @@ class Category(models.Model):
     '''类别'''
     name = models.CharField(help_text='类名', max_length=50, default='')
     desc = models.CharField(max_length=128, help_text='类别描述', default='')
-    add_time = models.DateTimeField(datetime.now, help_text='添加时间')
+    add_time = models.DateTimeField(default=datetime.now, help_text='添加时间')
+    change_time = models.DateTimeField(auto_now=True, help_text='修改时间')
 
     class Meta:
         verbose_name = "Category"
@@ -88,7 +89,7 @@ class Good(models.Model):
     category = models.ManyToManyField('Category', help_text='类别', default='')
     image = models.CharField(help_text='商品图', max_length=256, default='')
     stock = models.IntegerField(help_text='库存', default=1)
-    price = models.FloatField(help_text='价格', default=0)
+    price = models.FloatField(help_text='价格', default=1.0)
     desc = models.CharField(help_text='商品简介', max_length=50, default='')
     color = models.CharField(help_text='颜色', max_length=50, default='')
     size = models.CharField(help_text='大小', max_length=50, default='')
