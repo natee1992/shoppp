@@ -8,7 +8,7 @@ from django.db.transaction import atomic
 
 from Users.models import *
 from Api.utils import *
-from Api.decorators import seiler_permission
+from Api.decorators import *
 
 
 class SessionCodeResource(Resource):
@@ -66,6 +66,9 @@ class UserResource(Resource):
             userinfo.user = user
             userinfo.name = '顾客姓名'
             userinfo.save()
+            wallet = Wallet()
+            wallet.user = userinfo.user
+            wallet.save()
         if category == 'seiler':
             seiler = Seiler()
             seiler.user = user
@@ -124,6 +127,8 @@ class UserResource(Resource):
                 data['address'] = getattr(userinfo, 'address', '')
                 data['gender'] = getattr(userinfo, 'gender', '')
                 data['email'] = getattr(userinfo, 'email', '')
+                data['username'] = user.username
+                data['wallet'] = user.wallet.banlance
                 return json_response(data)
             elif hasattr(user, 'seiler'):
                 seiler = user.seiler
@@ -133,6 +138,7 @@ class UserResource(Resource):
                 data['address'] = getattr(seiler, 'address', '')
                 data['gender'] = getattr(seiler, 'gender', '')
                 data['email'] = getattr(seiler, 'email', '')
+                data['username'] = user.username
                 return json_response(data)
             else:
                 return json_response({
@@ -253,3 +259,35 @@ class CategoryResource(Resource):
             return json_response({
                 'msg': '商品类别为空'
             })
+
+
+class WalletResource(Resource):
+    '''钱包操作'''
+    # 充值
+    @atomic
+    @userinfo_permission
+    def post(self, request, *args, **kwargs):
+        data = request.POST
+        user = request.user
+        wallet = user.wallet
+        # 充值金额处理
+        try:
+            banlance_this = abs(int(data.get('banlance', 0)))
+        except Exception as e:
+            return params_errors({
+                'msg': '充值金额数据类型错误'
+            })
+        wallet.banlance += banlance_this
+        wallet.save()
+        return json_response({
+            'banlance': wallet.banlance
+        })
+
+    # 查看钱包余额
+    @userinfo_permission
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        banlance = user.wallet.banlance
+        return json_response({
+            'banlance': banlance
+        })

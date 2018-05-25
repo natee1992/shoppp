@@ -57,7 +57,7 @@ class Wallet(models.Model):
 class WalletDetails(models.Model):
     '''钱包流水'''
     wallet = models.OneToOneField(Wallet, help_text='钱包')
-    time = models.DateTimeField(datetime.now, help_text='发生时间')
+    time = models.DateTimeField(default=datetime.now, help_text='发生时间')
     order = models.OneToOneField('Order', help_text='订单')
 
     class Meta:
@@ -93,7 +93,7 @@ class Good(models.Model):
     desc = models.CharField(help_text='商品简介', max_length=50, default='')
     color = models.CharField(help_text='颜色', max_length=50, default='')
     size = models.CharField(help_text='大小', max_length=50, default='')
-    add_time = models.DateTimeField(datetime.now, help_text='添加时间')
+    add_time = models.DateTimeField(default=datetime.now, help_text='添加时间')
 
     class Meta:
         verbose_name = "Good"
@@ -107,7 +107,7 @@ class WatchHistory(models.Model):
     '''浏览历史'''
     user = models.ForeignKey(User, help_text='用户')
     good = models.ForeignKey('Good', help_text='商品')
-    add_time = models.DateTimeField(datetime.now, help_text='添加时间')
+    add_time = models.DateTimeField(default=datetime.now, help_text='添加时间')
 
     class Meta:
         verbose_name = "WatchHistory"
@@ -121,7 +121,7 @@ class Order(models.Model):
     '''订单'''
     user = models.ForeignKey(User, help_text='用户')
     good = models.ForeignKey('Good', help_text='商品')
-    add_time = models.DateTimeField(datetime.now, help_text='添加时间')
+    add_time = models.DateTimeField(default=datetime.now, help_text='添加时间')
     state = models.IntegerField(
         help_text='订单状态:0--->未付款；1--->已付款，代发货；2--->已发货', default=0)
     finish_time = models.CharField(max_length=48, help_text='订单付款时间')
@@ -138,7 +138,7 @@ class Comment(models.Model):
     '''评论'''
     user = models.ForeignKey(User, help_text='用户')
     good = models.ForeignKey('Good', help_text='商品')
-    add_time = models.DateTimeField(datetime.now, help_text='添加时间')
+    add_time = models.DateTimeField(default=datetime.now, help_text='添加时间')
     desc = models.CharField(help_text='评论内容', max_length=256)
 
     class Meta:
@@ -153,7 +153,7 @@ class UserFav(models.Model):
     '''用户收藏'''
     user = models.ForeignKey(User, help_text='用户')
     good = models.ForeignKey('Good', help_text='商品')
-    add_time = models.DateTimeField(datetime.now, help_text='添加时间')
+    add_time = models.DateTimeField(default=datetime.now, help_text='添加时间')
 
     class Meta:
         verbose_name = "UserFav"
@@ -180,7 +180,7 @@ class ShoppingHistory(models.Model):
     '''购买历史'''
     user = models.ForeignKey(User, help_text='用户')
     good = models.ForeignKey('Good', help_text='商品')
-    add_time = models.DateTimeField(datetime.now, help_text='添加时间')
+    add_time = models.DateTimeField(default=datetime.now, help_text='添加时间')
 
     class Meta:
         verbose_name = "ShoppingHistory"
