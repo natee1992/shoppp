@@ -9,7 +9,7 @@ class UserInfo(models.Model):
     '''用户信息表'''
     user = models.OneToOneField(User, help_text='用户')
     name = models.CharField(help_text='姓名', max_length=50, default='')
-    age = models.IntegerField(help_text='年龄', default='')
+    age = models.IntegerField(help_text='年龄', default=1)
     mobile = models.CharField(help_text='手机号码', max_length=11, default='')
     address = models.CharField(help_text='地址', max_length=128, default='')
     gender = models.CharField(choices=(
@@ -30,7 +30,7 @@ class Seiler(models.Model):
     gender = models.CharField(choices=(
         ('男', 'male'), ('女', 'female')), max_length=11, help_text='性别', default='male')
     email = models.EmailField(help_text='邮箱', default='')
-    age = models.IntegerField(help_text='年龄', default='')
+    age = models.IntegerField(help_text='年龄', default=1)
     mobile = models.CharField(help_text='手机号码', max_length=11, default='')
 
     class Meta:
