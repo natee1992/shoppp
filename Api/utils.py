@@ -23,3 +23,10 @@ def params_errors(data):
         'state': 422,
         'data': data
     }), content_type='application/json')
+
+
+def not_authenticated():
+    return HttpResponse(json.dumps({
+        'state': 401,
+        'msg': '用户未登录'
+    }))
