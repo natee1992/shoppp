@@ -123,7 +123,7 @@ class Order(models.Model):
     add_time = models.DateTimeField(default=datetime.now, help_text='添加时间')
     state = models.IntegerField(
         help_text='订单状态:0--->未付款；1--->已付款，代发货；2--->已发货', default=0)
-    finish_time = models.CharField(max_length=48, help_text='订单付款时间')
+    finish_time = models.DateTimeField(null=True, help_text='支付完成时间')
     all_price = models.CharField(default=0, max_length=50, help_text='商品总额')
 
     class Meta:

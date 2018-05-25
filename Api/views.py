@@ -406,34 +406,93 @@ class GoodResource(Resource):
         })
 
 
-# class ShoppingCatResource(Resource):
-#     '''用户购物车操作'''
-#     # 添加商品到购物车
-#     @atomic
-#     @userinfo_permission
-#     def put(self, request, *args, **kwargs):
-#         user = request.user
-#         data = request.PUT
-#         good_id = data.get('good_id', False)
-#         if not good_id:
-#             return params_errors({
-#                 'msg': '没有选择商品'
-#             })
-#         try:
-#             good_id = abs(int(good_id))
-#         except Exception as e:
-#             params_errors({
-#                 'msg': '商品id格式错误'
-#             })
-#         good = Good.objects.filter(id=good_id)
-#         if not good:
-#             json_response({
-#                 'msg': '商品不存在'
-#             })
-#         shoppingcat = ShoppingCat()
-#         shoppingcat.user = user
-#         shoppingcat.good =
-#         # 创建订单字典
+class ShoppingCatResource(Resource):
+    '''用户购物车操作'''
+    # 添加商品到购物车
+    @atomic
+    @userinfo_permission
+    def put(self, request, *args, **kwargs):
+        user = request.user
+        data = request.PUT
+        good_id = data.get('good_id', False)
+        num = int(data.get('num', 1))
+        if not good_id:
+            return params_errors({
+                'msg': '没有选择商品'
+            })
+        try:
+            good_id = abs(int(good_id))
+        except Exception as e:
+            return params_errors({
+                'msg': '商品id格式错误'
+            })
+        good = Good.objects.filter(id=good_id)
+        if not good:
+            return json_response({
+                'msg': '商品不存在'
+            })
+        shoppingcat = ShoppingCat.objects.filter(user=user)
+        if not shoppingcat:
+            shoppingcat = ShoppingCat()
+            shoppingcat.user = user
+            shoppingcat.save()
+            shoppingcatdetail = ShoppingCatDetail()
+            shoppingcatdetail.shoppingcat = shoppingcat
+            shoppingcatdetail.good = good[0]
+            shoppingcatdetail.num = num
+            shoppingcatdetail.save()
+            shoppingcat.total_price = good[0].price * num
+            shoppingcat.save()
+        else:
+            shoppingcatdetail = ShoppingCatDetail.objects.filter(
+                good=good[0], shoppingcat=shoppingcat[0])
+            if shoppingcatdetail:
+                shoppingcatdetail.num += num
+                shoppingcatdetail.save()
+                shoppingcat.total_price += good[0].price * num
+                shoppingcat.save()
+            else:
+                shoppingcatdetail = ShoppingCatDetail()
+                shoppingcatdetail.shoppingcat = shoppingcat[0]
+                shoppingcatdetail.good = good[0]
+                shoppingcatdetail.num = num
+                shoppingcatdetail.save()
+                shoppingcat[0].total_price += good[0].price * num
+                shoppingcat[0].save()
+        return json_response({
+            'msg': '添加购物车成功'
+        })
+
+    # 查看购物车
+    @userinfo_permission
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        shoppingcat = user.shoppingcat
+        # 构建购物车信息列表
+        all_data = {}
+        all_data['data'] = []
+        shoppingcatdetails = ShoppingCatDetail.objects.filter(
+            shoppingcat=shoppingcat)
+        if not shoppingcatdetails:
+            return json_response({
+                'msg': '购物车为空'
+            })
+        # 遍历所有属于该用户的商品列表
+        for shoppingcatdetail in shoppingcatdetails:
+            data = {}
+            data['name'] = shoppingcatdetail.good.name
+            data['num'] = shoppingcatdetail.num
+            data['price'] = shoppingcatdetail.good.price
+            data['good_price'] = shoppingcatdetail.good.price * \
+                shoppingcatdetail.num
+            all_data['data'].append(data)
+        total_price = shoppingcat.total_price
+        all_data['price'] = (total_price)
+        return json_response({
+            'data': all_data
+        })
+
+        # 创建订单字典
 
         # data = request.GET
         # try:
