@@ -3,6 +3,7 @@ from random import randint
 from Api.resources import Resource
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, logout, login
+from django.db.transaction import atomic
 
 from Users.models import *
 from Api.utils import *
@@ -28,12 +29,13 @@ class UserResource(Resource):
     '''用户注册、更新、查看信息'''
 
     # 用户注册
+    @atomic
     def put(self, request, *args, **kwargs):
         data = request.PUT
         username = data.get('username', '')
         password = data.get('password', '')
         ensure_password = data.get('ensure_password', '')
-        code = data.get('code', '')
+        code = int(data.get('code', ''))
         regist_code = request.session.get('regist_code', '')
         user = User.objects.filter(username=username)
         category = data.get('category', 'userinfo')
@@ -67,18 +69,19 @@ class UserResource(Resource):
             seiler.user = user
             seiler.name = '员工姓名'
             seiler.save()
-            login(request, user)
-            return json_response({
-                'user_id': user.id
-            })
+        login(request, user)
+        return json_response({
+            'user_id': user.id
+        })
 
     # 用户更新
+    @atomic
     def post(self, request, *args, **kwargs):
         if request.user.is_authenticated:
             user = request.user
             data = request.POST
             if hasattr(user, 'userinfo'):
-                userinfo = UserInfo()
+                userinfo = user.userinfo
                 userinfo.name = data.get('name', '')
                 try:
                     userinfo.age = abs(int(data.get('age', '')))
@@ -90,14 +93,14 @@ class UserResource(Resource):
                 email = data.get('email', '')
                 userinfo.save()
             elif hasattr(user, 'seiler'):
-                seiler = Seiler()
+                seiler = user.seiler
                 seiler.name = data.get('name', '')
                 seiler.gender = data.get('gender', '')
                 seiler.email = data.get('email', '')
                 try:
-                    userinfo.age = abs(int(data.get('age', '')))
+                    seiler.age = abs(int(data.get('age', '')))
                 except Exception as e:
-                    userinfo.age = 20
+                    seiler.age = 20
                 seiler.mobile = data.get('mobile', '')
                 seiler.save()
             return json_response({
@@ -131,7 +134,7 @@ class UserResource(Resource):
                 return json_response(data)
             else:
                 return json_response({
-                        'state': 401,
-                        'msg': '没有此用户信息'
-                    })
+                    'state': 401,
+                    'msg': '没有此用户信息'
+                })
         return not_authenticated()
