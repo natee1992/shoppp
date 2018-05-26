@@ -337,17 +337,69 @@ class GoodResource(Resource):
             'msg': '添加商品成功'
         })
 
-     # 所有商品
     def get(self, request, *args, **kwargs):
-        all_goods = Good.objects.all()
-        data = []
-        for good in all_goods:
-            good_dict = {}
-            good_dict['id'] = good.id
-            good_dict['name'] = good.name
-            good_dict['image'] = good.image
-            data.append(good_dict)
-        return json_response(data)
+        '''
+        通过检测是否传入good_id, 判断查看所有商品或者单个商品, 当查看单个商品时,
+        会自动将此商品添加到浏览历史中.
+        '''
+        data = request.GET
+        good_id = data.get('good_id', False)
+        # 判断是否传入了good_id
+        if not good_id:
+            all_goods = Good.objects.all()
+            # 判断是否为空列表
+            if not all_goods:
+                return json_response({
+                    'msg': '空列表'
+                })
+            data = []
+            for good in all_goods:
+                good_dict = {}
+                good_dict['id'] = good.id
+                good_dict['name'] = good.name
+                good_dict['image'] = good.image
+                data.append(good_dict)
+            return json_response(data)
+        # 如果传入了一个good_id则说明查看的是一个具体的商品
+        goods = Good.objects.filter(pk=good_id)
+        # 指定的商品是否存在
+        if not goods:
+            return json_response({
+                'msg': '商品id不存在'
+            })
+        good = goods[0]
+        good_dict = {}
+        good_dict['name'] = good.name
+        good_dict['image'] = good.image
+        good_dict['stock'] = good.stock
+        good_dict['price'] = good.price
+        good_dict['desc'] = good.desc
+        good_dict['color'] = good.color
+        good_dict['size'] = good.size
+        good_dict['add_time'] = datetime.strftime(good.add_time, '%Y-%m-%d')
+        categorys = Category.objects.filter(good=good)
+        # 如果该商品指定了分类:
+        if categorys:
+            good_dict['category'] = [{
+                'id': catetory.id,
+                'name': catetory.name,
+                'add_time': datetime.strftime(catetory.add_time, '%Y-%m-%d'),
+                'change_time': datetime.strftime(catetory.change_time, '%Y-%m-%d')
+            } for catetory in categorys]
+        # 添加浏览历史:
+        watchhistorys = WatchHistory.objects.filter(
+            user=request.user, good=good)
+        if watchhistorys:
+            watchhistory = watchhistorys[0]
+            watchhistory.add_time = datetime.now()
+            watchhistory.save()
+        else:
+            watchhistory = WatchHistory()
+            watchhistory.good = good[0]
+            watchhistory.user = request.user
+            watchhistory.save()
+        good_dict['watch'] = 'ok'
+        return json_response(good_dict)
 
     @atomic
     @seiler_permission
@@ -620,6 +672,7 @@ class OrderResource(Resource):
                     shopping_history = ShoppingHistory()
                     shopping_history.user = user
                     shopping_history.good = orderdetail.good
+                    shopping_history.state = 0
                     shopping_history.save()
                 return json_response({
                     'msg': '付款成功',
@@ -734,3 +787,110 @@ class UserFavResource(Resource):
         return json_response({
             'msg': '已从收藏夹删除该商品'
         })
+
+
+class CommentResource(Resource):
+    '''
+    用户评论
+    '''
+    # 查看已购买商品评论
+    @userinfo_permission
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        comments = user.comment_set.all()
+        if not comments:
+            return json_response({
+                'msg': '评价记录为空'
+            })
+        all_data = []
+        for comment in comments:
+            data = {}
+            data['good'] = comment.good.name
+            data['good_id'] = comment.good.id
+            try:
+                add_time = datetime.strftime(comment.add_time, '%Y-%m-%d')
+            except Exception as e:
+                add_time = '2018-01-01'
+            data['add_time'] = add_time
+            data['desc'] = comment.desc
+            all_data.append(data)
+        return json_response(all_data)
+
+    # 用户添加评价
+    @atomic
+    @userinfo_permission
+    def put(self, request, *args, **kwargs):
+        user = request.user
+        data = request.PUT
+        # 获取购买历史记录id
+        shopping_history_id = int(data.get('id', False))
+        user_comment = data.get('comment', '没有提供评价，系统默认好评')
+        if not shopping_history_id:
+            return json_response({
+                'msg': '没有提供购买历史记录商品'
+            })
+        shopping_history = ShoppingHistory.objects.filter(
+            id=shopping_history_id)
+        if not shopping_history:
+            return json_response({
+                'msg': '没有此条记录'
+            })
+        shopping_history = shopping_history[0]
+        if shopping_history.state == 1:
+            return json_response({
+                'msg': '此次购买已经评价，不能重复评价'
+            })
+        comment = Comment()
+        comment.user = user
+        comment.desc = user_comment
+        comment.good = shopping_history.good
+        comment.save()
+        shopping_history.state = 1
+        shopping_history.save()
+        return json_response({
+            'msg': '商品评价成功'
+        })
+
+
+class WatchHistoryResource(Resource):
+    # 查看浏览历史
+    @userinfo_permission
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        watchhistorys = user.watchhistory_set.all()
+        if not watchhistorys:
+            return json_response({
+                'msg': '空历史'
+            })
+        data = []
+        for watchhistory in watchhistorys:
+            watchhistory_dict = {}
+            watchhistory_dict['watchhistory_id'] = watchhistory.id
+            watchhistory_dict['good_id'] = watchhistory.good.name
+            watchhistory_dict['good_name'] = watchhistory.good.name
+            watchhistory_dict['add_time'] = datetime.strftime(
+                watchhistory.add_time, '%Y-%m-%d')
+            data.append(watchhistory_dict)
+        return json_response(data)
+
+
+class ShoppingHistoryResource(Resource):
+    # 查看商品购买历史
+    @userinfo_permission
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        shoppinghistorys = user.shoppinghistory_set.all()
+        if not shoppinghistorys:
+            return json_response({
+                'msg': '空历史'
+            })
+        data = []
+        for shoppinghistory in shoppinghistorys:
+            history_dict = {}
+            history_dict['id'] = shoppinghistory.id
+            history_dict['good_id'] = shoppinghistory.good.id
+            history_dict['good'] = shoppinghistory.good.name
+            history_dict['add_time'] = datetime.strftime(
+                shoppinghistory.add_time, '%Y-%m-%d')
+            data.append(history_dict)
+        return json_response(data)

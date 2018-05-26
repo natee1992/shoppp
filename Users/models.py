@@ -208,6 +208,7 @@ class ShoppingHistory(models.Model):
     user = models.ForeignKey(User, help_text='用户')
     good = models.ForeignKey('Good', help_text='商品')
     add_time = models.DateTimeField(default=datetime.now, help_text='添加时间')
+    state = models.IntegerField(default=0, help_text='0--->未评价，1--->已评价')
 
     class Meta:
         verbose_name = "ShoppingHistory"
